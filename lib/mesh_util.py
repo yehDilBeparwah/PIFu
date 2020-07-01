@@ -3,6 +3,17 @@ import numpy as np
 import torch
 from .sdf import create_grid, eval_grid_octree, eval_grid
 from skimage import measure
+import trimesh
+
+def as_mesh(scene_or_mesh):
+    """
+    Convert a possible scene to a mesh.
+
+    If conversion occurs, the returned mesh has only vertex and face data.
+    """
+    if isinstance(scene_or_mesh, trimesh.Scene):
+        return scene_or_mesh.dump(concatenate=True)
+    return scene_or_mesh
 
 
 def reconstruction(net, cuda, calib_tensor,
@@ -89,3 +100,4 @@ def save_obj_mesh_with_uv(mesh_path, verts, faces, uvs):
                                               f_plus[2], f_plus[2],
                                               f_plus[1], f_plus[1]))
     file.close()
+

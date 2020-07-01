@@ -99,6 +99,7 @@ class Evaluator:
             if self.netC:
                 self.netC.eval()
             save_path = '%s/%s/result_%s.obj' % (opt.results_path, opt.name, data['name'])
+            print("saving to-%s" % save_path)
             if self.netC:
                 gen_mesh_color(opt, self.netG, self.netC, self.cuda, data, save_path, use_octree=use_octree)
             else:

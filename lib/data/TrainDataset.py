@@ -18,6 +18,7 @@ def load_trimesh(root_dir):
     meshs = {}
     for i, f in enumerate(folders):
         sub_name = f
+        '''Todo: check if as_mesh was required'''
         meshs[sub_name] = trimesh.load(os.path.join(root_dir, f, '%s_100k.obj' % sub_name))
 
     return meshs

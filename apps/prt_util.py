@@ -5,6 +5,34 @@ import math
 from scipy.special import sph_harm
 import argparse
 from tqdm import tqdm
+from lib.mesh_util import as_mesh
+
+import resource
+
+from time import sleep
+from concurrent.futures import ThreadPoolExecutor
+
+class MemoryMonitor:
+    def __init__(self):
+        self.keep_measuring = True
+
+    def measure_usage(self):
+        max_usage = 0
+        cnt = 0
+        while self.keep_measuring:
+            max_usage = max(
+                max_usage,
+                resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            )
+            cnt += 1
+            if (cnt >= 30):
+                print(f"Peak memory usage: {max_usage}")
+                cnt = 0
+            sleep(1)
+
+        return max_usage
+
+
 
 def factratio(N, D):
     if N >= D:
@@ -84,8 +112,9 @@ def getSHCoeffs(order, phi, theta):
     
     return np.stack(shs, 1)
 
+
 def computePRT(mesh_path, n, order):
-    mesh = trimesh.load(mesh_path, process=False)
+    mesh = as_mesh(trimesh.load(mesh_path, process=False))
     vectors, phi, theta = sampleSphericalDirections(n)
     SH = getSHCoeffs(order, phi, theta)
 
@@ -122,16 +151,24 @@ def computePRT(mesh_path, n, order):
     # when loading PRT in other program, use the triangle list from trimesh.
     return PRT, mesh.faces
 
-def testPRT(dir_path, n=40):
-    if dir_path[-1] == '/':
-        dir_path = dir_path[:-1]
-    sub_name = dir_path.split('/')[-1][:-4]
-    obj_path = os.path.join(dir_path, sub_name + '_100k.obj')
+def testPRT(file_path, n=40):
+    if file_path[-1] == '/':
+        file_path = file_path[:-1]
+    sub_name = file_path.split('/')[-1]
+    dir_path = os.path.dirname(file_path)
     os.makedirs(os.path.join(dir_path, 'bounce'), exist_ok=True)
 
-    PRT, F = computePRT(obj_path, n, 2)
-    np.savetxt(os.path.join(dir_path, 'bounce', 'bounce0.txt'), PRT, fmt='%.8f')
-    np.save(os.path.join(dir_path, 'bounce', 'face.npy'), F)
+    with ThreadPoolExecutor() as executor:
+        monitor = MemoryMonitor()
+        mem_thread = executor.submit(monitor.measure_usage)
+        try:
+            fn_thread = executor.submit(computePRT, file_path, n, 2)
+        finally:
+            monitor.keep_measuring = False
+            PRT,F = mem_thread.result()
+            np.savetxt(os.path.join(dir_path, 'bounce', sub_name+'bounce0.txt'), PRT, fmt='%.8f')
+            np.save(os.path.join(dir_path, 'bounce', sub_name+'face.npy'), F)
+    print("PRT computed")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

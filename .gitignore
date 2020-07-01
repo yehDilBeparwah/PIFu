@@ -1,1 +1,11 @@
 checkpoints/*
+.DS_Store
+.idea/
+CMakeLists.txt
+D
+*/__pycache__/*
+*/*/__pycache__/*
+obj_samples/*
+results/*
+sample_images/*
+cmake*
